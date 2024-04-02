@@ -33,7 +33,7 @@ pca_dt <- data.table(unclass(pca)$x)
 # run t-sne on the PCAs, note that if you already have PCAs you need to set pca=F or it will run a pca again. 
 # pca is built into Rtsne, ive run it seperatly for you to see the internal steps
 
-tsne <- Rtsne(pca_dt, pca = F, perplexity = 15, check_duplicates = F)
+tsne <- Rtsne(pca_dt, pca = F, perplexity = 115, check_duplicates = F)
 
 # grab out the coordinates
 tsne_dt <- data.table(tsne$Y)
@@ -61,7 +61,7 @@ ggplot(del_k_tab,aes(x = k,y = -delta_k)) + geom_point() + geom_line() +
   geom_text(aes(label = k),hjust = 0, vjust = -1)
 
 
-opt_k <- which.min(delta_k) + 1 
+opt_k <- 4
 
 # now we run the model with our chosen k value
 gmm_data <- GMM(tsne_dt[,.(V1, V2)], opt_k)
@@ -69,7 +69,7 @@ gmm_data <- GMM(tsne_dt[,.(V1, V2)], opt_k)
 # the model gives a log-likelihood for each datapoint's membership to each cluster, me need to convert this 
 # log-likelihood into a probability
 
-l_clust <- gmm_data$Log_likelihood^10
+l_clust <- gmm_data$Log_likelihood^5
 
 l_clust <- data.table(l_clust)
 
@@ -89,7 +89,7 @@ setnames(tsne_dt, 'Cluster_2_prob', 'breed_2')
 setnames(tsne_dt, 'Cluster_3_prob', 'breed_4')
 setnames(tsne_dt, 'Cluster_1_prob', 'breed_1')
 
-ggplot(tsne_dt, aes(x = V1, y = V2, col = breed_4)) + geom_point()
+ggplot(tsne_dt, aes(x = V1, y = V2, col = breed_1)) + geom_point()
 
 View(tsne_dt)
 
@@ -102,5 +102,5 @@ submit$breed_4 <- tsne_dt$breed_4
 
 View(submit)
 
-fwrite(submit, './project/volume/data/processed/submit2.csv')
+fwrite(submit, './project/volume/data/processed/submit6.csv')
 #confirm R1 = 3, R5 = 2, R6 = 4
