@@ -1,8 +1,12 @@
+#j change
+set.seed(3)
+
 data <- fread('./project/volume/data/interim/data.csv')
 submit <- fread('./project/volume/data/interim/submit.csv')
 
 # do a pca
 pca <- prcomp(data, scale = TRUE)
+
 
 # look at the percent variance explained by each pca
 screeplot(pca)
@@ -33,21 +37,23 @@ pca_dt <- data.table(unclass(pca)$x)
 # run t-sne on the PCAs, note that if you already have PCAs you need to set pca=F or it will run a pca again. 
 # pca is built into Rtsne, ive run it seperatly for you to see the internal steps
 
-tsne <- Rtsne(pca_dt, pca = F, perplexity = 115, check_duplicates = F)
+tsne <- Rtsne(pca_dt, pca = F, perplexity = 90, check_duplicates = F)
 
 # grab out the coordinates
 tsne_dt <- data.table(tsne$Y)
 
 # plot, note that in this case I have access to party so I can see that it seems to have worked, You do not have access
 # to species so you will just be plotting in black to see if there are groups. 
-ggplot(tsne_dt, aes(x = V1, y = V2)) + geom_point()
+#j - change
+#ggplot(tsne_dt, aes(x = V1, y = V2)) + geom_point()
 
 
 
 # use a gaussian mixture model to find optimal k and then get probability of membership for each row to each group
 
 # this fits a gmm to the data for all k=1 to k= max_clusters, we then look for a major change in likelihood between k values
-k_bic <- Optimal_Clusters_GMM(tsne_dt[,.(V1,V2)], max_clusters = 4, criterion = "BIC")
+# j change max cluster to 10 not 4
+k_bic <- Optimal_Clusters_GMM(tsne_dt[,.(V1,V2)], max_clusters = 10, criterion = "BIC")
 
 # now we will look at the change in model fit between successive k values
 delta_k <- c(NA,k_bic[-1] - k_bic[-length(k_bic)])
@@ -84,10 +90,10 @@ tsne_dt$Cluster_2_prob <- cluster_prob$V2
 tsne_dt$Cluster_3_prob <- cluster_prob$V3
 tsne_dt$Cluster_4_prob <- cluster_prob$V4
 
-setnames(tsne_dt, 'Cluster_4_prob', 'breed_3')
-setnames(tsne_dt, 'Cluster_2_prob', 'breed_2')
-setnames(tsne_dt, 'Cluster_3_prob', 'breed_4')
-setnames(tsne_dt, 'Cluster_1_prob', 'breed_1')
+tsne_dt$breed_3 <- tsne_dt$Cluster_4_prob
+tsne_dt$breed_2 <- tsne_dt$Cluster_2_prob
+tsne_dt$breed_4 <- tsne_dt$Cluster_3_prob
+tsne_dt$breed_1 <- tsne_dt$Cluster_1_prob
 
 ggplot(tsne_dt, aes(x = V1, y = V2, col = breed_1)) + geom_point()
 
@@ -102,5 +108,5 @@ submit$breed_4 <- tsne_dt$breed_4
 
 View(submit)
 
-fwrite(submit, './project/volume/data/processed/submit6.csv')
+fwrite(submit, './project/volume/data/processed/submit8.csv')
 #confirm R1 = 3, R5 = 2, R6 = 4
