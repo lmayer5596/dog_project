@@ -1,12 +1,11 @@
-#j change
 set.seed(3)
 
+#read in data
 data <- fread('./project/volume/data/interim/data.csv')
 submit <- fread('./project/volume/data/interim/submit.csv')
 
 # do a pca
-pca <- prcomp(data, scale = TRUE)
-
+pca <- prcomp(data)
 
 # look at the percent variance explained by each pca
 screeplot(pca)
@@ -23,36 +22,15 @@ biplot(pca)
 # use the unclass() function to get the data in PCA space
 pca_dt <- data.table(unclass(pca)$x)
 
-
-# Laurens van der Maaten page on t-SNE author of original t-SNE paper
-#https://lvdmaaten.github.io/tsne/
-
-# distill.pub guide on using t-SNE effectivly
-#https://distill.pub/2016/misread-tsne/
-
-# response to distill.pub article with discussion of practical application of t-SNE
-#https://towardsdatascience.com/how-to-tune-hyperparameters-of-tsne-7c0596a18868
-
-
-# run t-sne on the PCAs, note that if you already have PCAs you need to set pca=F or it will run a pca again. 
-# pca is built into Rtsne, ive run it seperatly for you to see the internal steps
-
-tsne <- Rtsne(pca_dt, pca = F, perplexity = 90, check_duplicates = F)
+#use t-sne
+tsne <- Rtsne(pca_dt, pca = F, perplexity = 100, check_duplicates = F)
 
 # grab out the coordinates
 tsne_dt <- data.table(tsne$Y)
 
-# plot, note that in this case I have access to party so I can see that it seems to have worked, You do not have access
-# to species so you will just be plotting in black to see if there are groups. 
-#j - change
-#ggplot(tsne_dt, aes(x = V1, y = V2)) + geom_point()
-
-
-
 # use a gaussian mixture model to find optimal k and then get probability of membership for each row to each group
 
 # this fits a gmm to the data for all k=1 to k= max_clusters, we then look for a major change in likelihood between k values
-# j change max cluster to 10 not 4
 k_bic <- Optimal_Clusters_GMM(tsne_dt[,.(V1,V2)], max_clusters = 10, criterion = "BIC")
 
 # now we will look at the change in model fit between successive k values
@@ -74,7 +52,6 @@ gmm_data <- GMM(tsne_dt[,.(V1, V2)], opt_k)
 
 # the model gives a log-likelihood for each datapoint's membership to each cluster, me need to convert this 
 # log-likelihood into a probability
-
 l_clust <- gmm_data$Log_likelihood^5
 
 l_clust <- data.table(l_clust)
@@ -84,7 +61,6 @@ net_lh <- apply(l_clust, 1, FUN = function(x){sum(1/x)})
 cluster_prob <- 1/l_clust/net_lh
 
 # we can now plot to see what cluster 1 looks like
-View(cluster_prob)
 tsne_dt$Cluster_1_prob <- cluster_prob$V1
 tsne_dt$Cluster_2_prob <- cluster_prob$V2
 tsne_dt$Cluster_3_prob <- cluster_prob$V3
@@ -97,16 +73,10 @@ tsne_dt$breed_1 <- tsne_dt$Cluster_1_prob
 
 ggplot(tsne_dt, aes(x = V1, y = V2, col = breed_1)) + geom_point()
 
-View(tsne_dt)
-
 submit$breed_1 <- tsne_dt$breed_1
 submit$breed_2 <- tsne_dt$breed_2
 submit$breed_3 <- tsne_dt$breed_3
 submit$breed_4 <- tsne_dt$breed_4
 
-
-
-View(submit)
-
-fwrite(submit, './project/volume/data/processed/submit8.csv')
+fwrite(submit, './project/volume/data/processed/submitFINAL.csv')
 #confirm R1 = 3, R5 = 2, R6 = 4
